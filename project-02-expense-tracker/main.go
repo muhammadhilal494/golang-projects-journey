@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,9 +12,9 @@ import (
 )
 
 type Expense struct {
-	Amount      float64
-	Category    string
-	Description string
+	Amount      float64 `json:"amount"`
+	Category    string  `json:"category"`
+	Description string  `json:"description"`
 }
 
 func readInput(reader *bufio.Reader, prompt string) (string, error) {
@@ -113,12 +114,10 @@ func viewSummary(expenses []Expense) {
 
 		total += expense.Amount
 
-		// Normalize category for calculations
 		key := strings.ToLower(strings.TrimSpace(expense.Category))
 
 		categoryTotals[key] += expense.Amount
 
-		// Preserve the first original category name
 		if _, exists := categoryNames[key]; !exists {
 			categoryNames[key] = expense.Category
 		}
@@ -138,11 +137,61 @@ func viewSummary(expenses []Expense) {
 
 }
 
+func saveExpenses(expenses []Expense) error {
+
+	data, err := json.MarshalIndent(expenses, "", "    ")
+
+	if err != nil {
+		return fmt.Errorf("failed to encode expenses: %w", err)
+	}
+
+	err = os.WriteFile("expenses.json", data, 0644)
+
+	if err != nil {
+		return fmt.Errorf("failed to write expenses file: %w", err)
+	}
+
+	fmt.Println("Expenses saved successfully!")
+
+	return nil
+}
+
+func loadExpenses() ([]Expense, error) {
+
+	data, err := os.ReadFile("expenses.json")
+
+	if err != nil {
+		return nil, err
+	}
+
+	var expenses []Expense
+
+	err = json.Unmarshal(data, &expenses)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return expenses, nil
+}
+
 func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	var expenses []Expense
+	expenses, err := loadExpenses()
+
+	if errors.Is(err, os.ErrNotExist) {
+		fmt.Println("No previous expenses found. Starting fresh.")
+		expenses = []Expense{}
+
+	} else if err != nil {
+		fmt.Println("Error loading expenses:", err)
+		return
+
+	} else {
+		fmt.Println("Expenses loaded successfully!")
+	}
 
 	for {
 
@@ -155,7 +204,13 @@ func main() {
 		choiceInput, err := readInput(reader, "Enter your choice: ")
 
 		if errors.Is(err, io.EOF) {
-			fmt.Println("\nGoodbye!")
+			fmt.Println("\nInput ended. Saving expenses...")
+
+			if saveErr := saveExpenses(expenses); saveErr != nil {
+				fmt.Println("Error saving expenses:", saveErr)
+			}
+
+			fmt.Println("Goodbye!")
 			return
 		}
 
@@ -178,7 +233,13 @@ func main() {
 
 			if err != nil {
 				if errors.Is(err, io.EOF) {
-					fmt.Println("\nInput ended. Goodbye!")
+					fmt.Println("\nInput ended. Saving expenses...")
+
+					if saveErr := saveExpenses(expenses); saveErr != nil {
+						fmt.Println("Error saving expenses:", saveErr)
+					}
+
+					fmt.Println("Goodbye!")
 					return
 				}
 
@@ -198,6 +259,13 @@ func main() {
 			viewSummary(expenses)
 
 		case 4:
+			err = saveExpenses(expenses)
+
+			if err != nil {
+				fmt.Println("Error saving expenses:", err)
+				continue
+			}
+
 			fmt.Println("\nThank you for using Expense Tracker!")
 			return
 
