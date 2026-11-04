@@ -10,10 +10,21 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func notesHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "This is the notes endpoint!")
+	// fmt.Fprintln(w, "This is the notes endpoint!")
 
-	fmt.Fprintln(w, "HTTP Method:", r.Method)
-	fmt.Fprintln(w, "URL Path:", r.URL.Path)
+	// fmt.Fprintln(w, "HTTP Method:", r.Method)
+	// fmt.Fprintln(w, "URL Path:", r.URL.Path)
+
+	switch r.Method {
+	case http.MethodGet:
+		fmt.Fprintln(w, "Fetching all notes")
+	case http.MethodPost:
+		fmt.Fprintln(w, "Creating a new note")
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Fprintln(w, "Method not allowed")
+
+	}
 }
 
 func main() {
