@@ -1,9 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
+
+type Note struct {
+	ID      int    `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+var notes []Note
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome to Notes API! | Hilal")
@@ -17,9 +26,30 @@ func notesHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		fmt.Fprintln(w, "Fetching all notes")
+
+    w.Header().Set("Content-Type", "application/json")
+
+    json.NewEncoder(w).Encode(notes)
+
 	case http.MethodPost:
-		fmt.Fprintln(w, "Creating a new note")
+
+		var newNote Note
+
+		err := json.NewDecoder(r.Body).Decode(&newNote)
+
+		if err != nil {
+			http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+			return
+		}
+
+		newNote.ID = len(notes) + 1
+
+		notes = append(notes, newNote)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+
+		json.NewEncoder(w).Encode(newNote)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintln(w, "Method not allowed")
