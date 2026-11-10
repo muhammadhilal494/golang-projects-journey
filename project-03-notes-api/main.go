@@ -15,6 +15,7 @@ type Note struct {
 }
 
 var notes []Note
+var nextNoteID = 1
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -46,7 +47,8 @@ func notesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		newNote.ID = len(notes) + 1
+		newNote.ID = nextNoteID
+		nextNoteID++
 
 		notes = append(notes, newNote)
 
@@ -57,40 +59,67 @@ func notesHandler(w http.ResponseWriter, r *http.Request) {
 
 	default:
 
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintln(w, "Method not allowed")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
 func singleNoteHandler(w http.ResponseWriter, r *http.Request) {
 
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	prefix := "/api/v1/notes/"
 
 	if !strings.HasPrefix(r.URL.Path, prefix) {
-		http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
 
 	idString := strings.TrimPrefix(r.URL.Path, prefix)
 
 	id, err := strconv.Atoi(idString)
-
 	if err != nil || id <= 0 {
 		http.Error(w, "Invalid note ID", http.StatusBadRequest)
 		return
 	}
 
-	for _, note := range notes {
+	switch r.Method {
+	case http.MethodGet, http.MethodPut, http.MethodDelete:
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	for i, note := range notes {
 		if note.ID == id {
 
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(note)
-			return
+			switch r.Method {
+
+			case http.MethodGet:
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(note)
+				return
+
+			case http.MethodPut:
+				var updatedNote Note
+
+				err := json.NewDecoder(r.Body).Decode(&updatedNote)
+				if err != nil {
+					http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+					return
+				}
+
+				updatedNote.ID = note.ID
+				notes[i] = updatedNote
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(updatedNote)
+				return
+
+			case http.MethodDelete:
+				notes = append(notes[:i], notes[i+1:]...)
+
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 		}
 	}
 
