@@ -14,6 +14,18 @@ type Note struct {
 	Content string `json:"content"`
 }
 
+func validateNote(note *Note) bool {
+
+	note.Title = strings.TrimSpace(note.Title)
+	note.Content = strings.TrimSpace(note.Content)
+
+	if note.Title == "" || note.Content == "" {
+		return false
+	}
+
+	return true
+}
+
 var notes []Note
 var nextNoteID = 1
 
@@ -44,6 +56,11 @@ func notesHandler(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+			return
+		}
+
+		if !validateNote(&newNote) {
+			http.Error(w, "Title and content cannot be empty", http.StatusBadRequest)
 			return
 		}
 
@@ -93,16 +110,24 @@ func singleNoteHandler(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 
 			case http.MethodGet:
+
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(note)
 				return
 
 			case http.MethodPut:
+
 				var updatedNote Note
 
 				err := json.NewDecoder(r.Body).Decode(&updatedNote)
+
 				if err != nil {
 					http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+					return
+				}
+
+				if !validateNote(&updatedNote) {
+					http.Error(w, "Title and content cannot be empty", http.StatusBadRequest)
 					return
 				}
 
@@ -111,10 +136,12 @@ func singleNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
+
 				json.NewEncoder(w).Encode(updatedNote)
 				return
 
 			case http.MethodDelete:
+
 				notes = append(notes[:i], notes[i+1:]...)
 
 				w.WriteHeader(http.StatusNoContent)
