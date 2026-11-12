@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/muhammadhilal494/golang-projects-journey/project-03-notes-api/internal/note"
 )
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +31,7 @@ func notesHandler(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodPost:
 
-		var newNote Note
+		var newNote note.Note
 
 		err := json.NewDecoder(r.Body).Decode(&newNote)
 
@@ -38,7 +40,7 @@ func notesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !validateNote(&newNote) {
+		if !note.ValidateNote(&newNote) {
 			http.Error(w, "Title and content cannot be empty", http.StatusBadRequest)
 			return
 		}
@@ -82,20 +84,20 @@ func singleNoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i, note := range notes {
-		if note.ID == id {
+	for i, existingNote := range notes {
+		if existingNote.ID == id {
 
 			switch r.Method {
 
 			case http.MethodGet:
 
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(note)
+				json.NewEncoder(w).Encode(existingNote)
 				return
 
 			case http.MethodPut:
 
-				var updatedNote Note
+				var updatedNote note.Note
 
 				err := json.NewDecoder(r.Body).Decode(&updatedNote)
 
@@ -104,12 +106,12 @@ func singleNoteHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-				if !validateNote(&updatedNote) {
+				if !note.ValidateNote(&updatedNote) {
 					http.Error(w, "Title and content cannot be empty", http.StatusBadRequest)
 					return
 				}
 
-				updatedNote.ID = note.ID
+				updatedNote.ID = existingNote.ID
 				notes[i] = updatedNote
 
 				w.Header().Set("Content-Type", "application/json")

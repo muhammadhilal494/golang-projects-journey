@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/muhammadhilal494/golang-projects-journey/project-03-notes-api/internal/note"
 )
 
-var notes []Note
+var notes []note.Note
 var nextNoteID = 1
 
 func main() {

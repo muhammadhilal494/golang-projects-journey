@@ -1,4 +1,4 @@
-package main
+package note
 
 import "strings"
 
@@ -8,7 +8,7 @@ type Note struct {
 	Content string `json:"content"`
 }
 
-func validateNote(note *Note) bool {
+func ValidateNote(note *Note) bool {
 
 	note.Title = strings.TrimSpace(note.Title)
 	note.Content = strings.TrimSpace(note.Content)
